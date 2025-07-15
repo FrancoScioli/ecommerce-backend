@@ -1,0 +1,73 @@
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, NotFoundException, BadRequestException, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { CategoryService } from './category.service';
+import { Category } from '@prisma/client';
+import { diskStorage } from 'multer';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CreateCategoryDto } from './dto/create-category.dto';
+import { extname } from 'path';
+import { ConfigService } from '@nestjs/config';
+
+
+@Controller('category')
+export class CategoryController {
+  constructor(
+    private readonly categoryService: CategoryService,
+    private readonly config: ConfigService
+  ) {}
+
+  @UseGuards(JwtAuthGuard)
+
+  @Post()
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: './uploads/category',
+        filename: (req, file, callback) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          callback(null, `${uniqueSuffix}${ext}`);
+        },
+      }),
+      fileFilter: (req, file, callback) => {
+        if (!file.mimetype.match(/\/(jpg|jpeg|png|webp)$/)) {
+          return callback(new BadRequestException('Solo se permiten imágenes JPG/PNG/WEBP'), false);
+        }
+        callback(null, true);
+      },
+      limits: { fileSize: 5 * 1024 * 1024 }, 
+    }),
+  )
+  async create(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('name') name: string,
+  ) {
+    if (!file) throw new BadRequestException('Se requiere una imagen');
+    if (!name) throw new BadRequestException('Se requiere el nombre de la categoría');
+
+    const baseUrl = this.config.get<string>('BASE_URL');
+    const imageUrl = `${baseUrl}/uploads/category/${file.filename}`;
+
+    const dto: CreateCategoryDto = { name, imageUrl };
+    return this.categoryService.create(dto);
+  }
+
+  @Get()
+  findAll() {
+    return this.categoryService.findAll();
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.categoryService.findOne(+id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  async remove(@Param('id') id: string) {
+    const deleted = await this.categoryService.remove(+id);
+    if (!deleted) throw new NotFoundException('Categoría no encontrada');
+    return { message: 'Categoría eliminada' };
+  }
+}

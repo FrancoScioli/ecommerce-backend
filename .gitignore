@@ -1,0 +1,65 @@
+# ────────── NODE/GENERAL──────────
+node_modules/
+dist/
+build/
+coverage/
+.next/
+.out/
+uploads/
+client/out/
+
+# ────────── LOGS Y TEMPORALES──────────
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.temp/
+.tmp/
+*.seed
+pids/
+*.pid
+*.pid.lock
+
+# ────────── ENV FILES──────────
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+
+# ────────── IDEs y CONFIGS──────────
+.DS_Store
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# ────────── YARN / PNPM / VERCEL──────────
+.pnp*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+.vercel
+
+# ────────── TYPESCRIPT──────────
+*.tsbuildinfo
+next-env.d.ts
+
+# ────────── DIAGNÓSTICO NODE──────────
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
