@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: ecommerce-backend
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: node dist/main.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+    autoDeploy: true
