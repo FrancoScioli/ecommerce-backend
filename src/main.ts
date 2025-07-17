@@ -41,19 +41,6 @@ async function bootstrap() {
     next()
   })
 
-  // Sirvo frontend estatico
-  const clientPath = join(__dirname, '..', 'client', 'out')
-  app.use(express.static(clientPath))
-
-  // ruta no-API al index.html del frontend
-  app.use((req, res, next) => {
-    if (!req.path.includes('.') && req.method === 'GET') {
-      res.sendFile(join(clientPath, 'index.html'))
-    } else {
-      next()
-    }
-  })
-
   await app.listen(process.env.PORT || 3001)
 }
 
