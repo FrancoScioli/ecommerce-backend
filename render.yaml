@@ -3,7 +3,7 @@ services:
     name: ecommerce-backend
     env: node
     plan: starter
-    buildCommand: npm install && npm run build
+    buildCommand: npm install && npm run build:prod
     startCommand: node dist/main.js
     envVars:
       - key: NODE_ENV
