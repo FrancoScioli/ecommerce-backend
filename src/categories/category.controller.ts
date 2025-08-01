@@ -1,41 +1,36 @@
 import { Controller, Get, Post, Body, Param, Delete, UseGuards, NotFoundException, BadRequestException, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { Category } from '@prisma/client';
-import { diskStorage } from 'multer';
+import { memoryStorage } from 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { extname } from 'path';
 import { ConfigService } from '@nestjs/config';
+import { S3Service } from '../aws-s3/s3.service';
 
 
 @Controller('category')
 export class CategoryController {
   constructor(
     private readonly categoryService: CategoryService,
-    private readonly config: ConfigService
-  ) {}
+    private readonly config: ConfigService,
+    private readonly s3Service: S3Service
+  ) { }
 
   @UseGuards(JwtAuthGuard)
 
   @Post()
   @UseInterceptors(
     FileInterceptor('image', {
-      storage: diskStorage({
-        destination: './uploads/category',
-        filename: (req, file, callback) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const ext = extname(file.originalname);
-          callback(null, `${uniqueSuffix}${ext}`);
-        },
-      }),
-      fileFilter: (req, file, callback) => {
+      storage: memoryStorage(),
+      fileFilter: (_req, file, callback) => {
         if (!file.mimetype.match(/\/(jpg|jpeg|png|webp)$/)) {
           return callback(new BadRequestException('Solo se permiten imágenes JPG/PNG/WEBP'), false);
         }
         callback(null, true);
       },
-      limits: { fileSize: 5 * 1024 * 1024 }, 
+      limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
   async create(
@@ -43,10 +38,8 @@ export class CategoryController {
     @Body('name') name: string,
   ) {
     if (!file) throw new BadRequestException('Se requiere una imagen');
-    if (!name) throw new BadRequestException('Se requiere el nombre de la categoría');
-
-    const baseUrl = this.config.get<string>('BASE_URL');
-    const imageUrl = `${baseUrl}/uploads/category/${file.filename}`;
+    if (!name) throw new BadRequestException('Se requiere el nombre de la categoría');    
+    const imageUrl = await this.s3Service.uploadFile(file, 'categories');
 
     const dto: CreateCategoryDto = { name, imageUrl };
     return this.categoryService.create(dto);
