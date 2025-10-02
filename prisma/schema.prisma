@@ -7,11 +7,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Source {
+  INTERNAL
+  ZECAT
+}
+
 model Category {
   id       Int       @id @default(autoincrement())
   name     String
   imageUrl String
   products Product[]
+  externalId   String?   @unique  // Zecat
+  source       Source    @default(INTERNAL)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
 
 model Product {
@@ -25,6 +34,14 @@ model Product {
   variants      Variant[]
   cartItems     CartItem[]
   saleProducts  SaleProduct[]
+
+  externalId   String?   @unique   // id de Zecat
+  source       Source    @default(INTERNAL)
+  sku          String?              // referencia proveedor
+  stock        Int?                 // stock total si no hay variantes
+  isActive     Boolean   @default(true)   // para ocultar manualmente
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 } 
 
 model Variant {
@@ -33,6 +50,9 @@ model Variant {
   product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId Int
   options   VariantOption[]
+
+  externalId String? @unique
+  stock      Int?            // stock a nivel variante
 }
 
 model VariantOption {
@@ -41,6 +61,9 @@ model VariantOption {
   variant   Variant    @relation(fields: [variantId], references: [id])
   variantId Int
   cartItems CartItem[]
+
+  externalId String?  @unique
+  stock      Int?
 }
 
 model ProductImage {

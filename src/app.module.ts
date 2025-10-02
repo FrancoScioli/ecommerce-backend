@@ -14,7 +14,7 @@ import { CarouselImageModule } from './carousel-image/carousel-image.module';
 import { PaymentsModule } from './payments/payments.module';
 import { SalesModule } from './sales/sales.module';
 import { ShippingModule } from './shipping/shipping.module';
-
+import { ZecatModule } from './zecat/zecat.module';
 
 
 @Module({
@@ -36,7 +36,8 @@ import { ShippingModule } from './shipping/shipping.module';
     CarouselImageModule,
     PaymentsModule,
     SalesModule,
-    ShippingModule
+    ShippingModule,
+    ZecatModule
   ],
   controllers: [AppController],
   providers: [AppService],
