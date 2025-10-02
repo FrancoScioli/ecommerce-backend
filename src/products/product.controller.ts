@@ -1,12 +1,15 @@
 import {
   Controller, Get, Post, Body, Param, Delete,
   UseGuards, UseInterceptors, UploadedFiles, BadRequestException,
-  Query
+  Query,
+  Put,
+  ParseIntPipe
 } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ProductService } from './product.service';
+import { UpdateProductDto } from './dto/update-product.dto';
 
 @Controller('product')
 export class ProductController {
@@ -76,5 +79,16 @@ export class ProductController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.productService.remove(+id);
+  }
+
+  @Put(':id')
+  @UseInterceptors(FilesInterceptor('images', 5)) 
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateProductDto,
+    @UploadedFiles() images: Express.Multer.File[] = [],
+  ) {
+    // images es opcional
+    return this.productService.update(id, dto, images)
   }
 }
