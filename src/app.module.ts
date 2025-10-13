@@ -15,6 +15,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { SalesModule } from './sales/sales.module';
 import { ShippingModule } from './shipping/shipping.module';
 import { ZecatModule } from './zecat/zecat.module';
+import { SearchModule } from './search/search.module';
 
 
 @Module({
@@ -37,7 +38,8 @@ import { ZecatModule } from './zecat/zecat.module';
     PaymentsModule,
     SalesModule,
     ShippingModule,
-    ZecatModule
+    ZecatModule,
+    SearchModule
   ],
   controllers: [AppController],
   providers: [AppService],
