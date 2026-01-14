@@ -33,7 +33,9 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const email = dto.email.trim().toLowerCase();
+
+    const user = await this.prisma.user.findUnique({ where: { email: email } });
 
     if (!user) {
       throw new BadRequestException('Credenciales inválidas');
@@ -81,9 +83,11 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
+    const email = dto.email.trim().toLowerCase();
+
     const user = await this.prisma.user.create({
       data: {
-        email: dto.email,
+        email,
         password: hashedPassword,
         role: dto.role,
         firstName: dto.firstName,
