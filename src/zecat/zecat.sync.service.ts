@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common'
 import { Prisma, Source } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { ZecatService } from './zecat.service'
-import { ZecatProduct, ZecatProductList } from './zecat.types'
+import { ZecatProduct } from './zecat.types'
+import { PricingConfigService } from '../pricing-config/pricing-config.service'
 
 @Injectable()
 export class ZecatSyncService {
@@ -11,6 +12,7 @@ export class ZecatSyncService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly zecat: ZecatService,
+    private readonly pricingConfig: PricingConfigService,
   ) { }
 
   async syncCategories() {
@@ -36,13 +38,19 @@ export class ZecatSyncService {
           externalId: String(cat.id),
           source: Source.ZECAT,
         },
-      });
+      })
     }
   }
 
   async syncProducts() {
     let page = 1
     const pageSize = Number(process.env.ZECAT_SYNC_PAGE_SIZE ?? 100)
+
+    // Factor total = (1 + markup/100) * 1.21 IVA
+    const priceFactor = await this.getPriceFactorSafe()
+    this.logger.log(
+      `[syncProducts] Usando factor total de precio (markup + IVA): ${priceFactor.toString()}`,
+    )
 
     while (true) {
       const list: any = await this.zecat.listProducts(page, pageSize)
@@ -53,15 +61,24 @@ export class ZecatSyncService {
       if (items.length === 0) break
 
       for (const productFromApi of items) {
-        await this.upsertProductFromZecat(productFromApi)
+        try {
+          await this.upsertProductFromZecat(productFromApi as ZecatProduct, priceFactor)
+        } catch (error) {
+          this.logger.error('[syncProducts] Error procesando producto Zecat', {
+            productFromApi,
+          })
+          this.logger.error(error as any)
+        }
       }
 
       if (items.length < pageSize) break
       page++
     }
   }
-
-
+  private roundTo2(value: number): number {
+    // evita problemas típicos de float (121.00000000000001)
+    return Math.round((value + Number.EPSILON) * 100) / 100
+  }
 
   private normalizeFromApi(productFromApi: ZecatProduct) {
     const externalId = String(
@@ -76,19 +93,18 @@ export class ZecatSyncService {
       (productFromApi as any).title ??
       'Producto'
 
-    const description =
-      (productFromApi as any).description ?? ''
+    const description = (productFromApi as any).description ?? ''
 
+    // Precio base del proveedor como number (porque Product.price es Float)
     const price = Number(
       (productFromApi as any).price ??
       (productFromApi as any).finalPrice ??
       0
     )
 
-    const sku =
-      (productFromApi as any).sku
-        ? String((productFromApi as any).sku)
-        : null
+    const sku = (productFromApi as any).sku
+      ? String((productFromApi as any).sku)
+      : null
 
     const stockRaw =
       (productFromApi as any).stock ??
@@ -110,23 +126,19 @@ export class ZecatSyncService {
 
     const fam = famArr.length ? famArr[0] : null
 
-    const categoryExternalId = fam?.id != null
-      ? String(fam.id)
-      : 'UNCATEGORIZED'
+    const categoryExternalId = fam?.id != null ? String(fam.id) : 'UNCATEGORIZED'
 
-    const categoryName =
-      (fam?.title ?? fam?.name ?? 'Sin categoría')
+    const categoryName = fam?.title ?? fam?.name ?? 'Sin categoría'
 
     const imageUrls: string[] = Array.isArray((productFromApi as any).images)
       ? (productFromApi as any).images
         .map((img: any) => img?.image_url ?? img?.url ?? '')
         .filter((u: string) => !!u)
-      : ((productFromApi as any).image
+      : (productFromApi as any).image
         ? [String((productFromApi as any).image)]
-        : [])
+        : []
 
-    const attributes =
-      (productFromApi as any).attributes ?? {}
+    const attributes = (productFromApi as any).attributes ?? {}
 
     return {
       externalId,
@@ -145,11 +157,24 @@ export class ZecatSyncService {
     }
   }
 
-
-
-
-  private async upsertProductFromZecat(productFromApi: ZecatProduct) {
+  private async upsertProductFromZecat(
+    productFromApi: ZecatProduct,
+    priceFactor: Prisma.Decimal,
+  ) {
     const norm = this.normalizeFromApi(productFromApi)
+
+    if (!norm.externalId) {
+      this.logger.warn(
+        '[upsertProductFromZecat] Producto sin externalId, se omite',
+      )
+      return
+    }
+
+    // Convertimos Decimal -> number para guardar un campo Float
+    const factorNumber = Number(priceFactor)
+
+    const rawFinalPrice = norm.price * factorNumber
+    const finalPrice = this.roundTo2(rawFinalPrice)
 
     const categoryRel: Prisma.ProductCreateInput['category'] = {
       connectOrCreate: {
@@ -166,7 +191,7 @@ export class ZecatSyncService {
     const createData: Prisma.ProductCreateInput = {
       name: norm.name,
       description: norm.description,
-      price: norm.price,
+      price: finalPrice,
       category: categoryRel,
       stock: norm.stock,
       isActive: norm.isActive,
@@ -178,7 +203,7 @@ export class ZecatSyncService {
     const updateData: Prisma.ProductUpdateInput = {
       name: norm.name,
       description: norm.description,
-      price: norm.price,
+      price: finalPrice,
       stock: norm.stock,
       isActive: norm.isActive,
       sku: norm.sku,
@@ -211,7 +236,6 @@ export class ZecatSyncService {
       }
     }
 
-
     // Variantes (atributos)
     for (const [attrName, rawValues] of Object.entries(norm.attributes)) {
       const variantName = String(attrName).trim()
@@ -219,7 +243,9 @@ export class ZecatSyncService {
         continue
 
       let variantId: number
-      const existingVariant = product.variants.find((v) => v.name === variantName)
+      const existingVariant = product.variants.find(
+        (v) => v.name === variantName,
+      )
       if (existingVariant) {
         variantId = existingVariant.id
       } else {
@@ -250,6 +276,20 @@ export class ZecatSyncService {
     }
   }
 
+  // helper seguro por si falla la config
+  private async getPriceFactorSafe(): Promise<Prisma.Decimal> {
+    try {
+      return await this.pricingConfig.getPriceFactorWithIva()
+    } catch (error) {
+      this.logger.error(
+        '[PricingConfig] No se pudo obtener factor de precio, usando 1.21 (solo IVA)',
+        error as any,
+      )
+      // fallback: solo IVA 21%
+      return new Prisma.Decimal(1.21)
+    }
+  }
+
   async fullSync() {
     this.logger.log('Sincronizando categorías…')
     await this.syncCategories()
@@ -258,3 +298,4 @@ export class ZecatSyncService {
     this.logger.log('OK')
   }
 }
+

@@ -13,36 +13,36 @@ enum Source {
 }
 
 model Category {
-  id       Int       @id @default(autoincrement())
-  name     String
-  imageUrl String
-  products Product[]
-  externalId   String?   @unique  // Zecat
-  source       Source    @default(INTERNAL)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id         Int       @id @default(autoincrement())
+  name       String
+  imageUrl   String
+  products   Product[]
+  externalId String?   @unique // Zecat
+  source     Source    @default(INTERNAL)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 }
 
 model Product {
-  id            Int            @id @default(autoincrement())
-  name          String
-  description   String
-  price         Float
-  categoryId    Int
-  category      Category       @relation(fields: [categoryId], references: [id])
-  images        ProductImage[]
-  variants      Variant[]
-  cartItems     CartItem[]
-  saleProducts  SaleProduct[]
+  id           Int            @id @default(autoincrement())
+  name         String
+  description  String
+  price        Float
+  categoryId   Int
+  category     Category       @relation(fields: [categoryId], references: [id])
+  images       ProductImage[]
+  variants     Variant[]
+  cartItems    CartItem[]
+  saleProducts SaleProduct[]
 
-  externalId   String?   @unique   // id de Zecat
-  source       Source    @default(INTERNAL)
-  sku          String?              // referencia proveedor
-  stock        Int?                 // stock total si no hay variantes
-  isActive     Boolean   @default(true)   // para ocultar manualmente
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-} 
+  externalId String?  @unique // id de Zecat
+  source     Source   @default(INTERNAL)
+  sku        String? // referencia proveedor
+  stock      Int? // stock total si no hay variantes
+  isActive   Boolean  @default(true) // para ocultar manualmente
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
 
 model Variant {
   id        Int             @id @default(autoincrement())
@@ -52,7 +52,7 @@ model Variant {
   options   VariantOption[]
 
   externalId String? @unique
-  stock      Int?            // stock a nivel variante
+  stock      Int? // stock a nivel variante
 }
 
 model VariantOption {
@@ -62,7 +62,7 @@ model VariantOption {
   variantId Int
   cartItems CartItem[]
 
-  externalId String?  @unique
+  externalId String? @unique
   stock      Int?
 }
 
@@ -108,16 +108,16 @@ model CarouselImage {
 }
 
 model Sale {
-  id             Int           @id @default(autoincrement())
-  total          Float
-  createdAt      DateTime      @default(now())
-  userId         Int
-  user           User          @relation(fields: [userId], references: [id])
-  saleProducts   SaleProduct[]
-  deliveryMethod String        
-  shippingAddress String?      
-  postalCode      String?      
-  shippingCost    Float?       
+  id              Int           @id @default(autoincrement())
+  total           Float
+  createdAt       DateTime      @default(now())
+  userId          Int
+  user            User          @relation(fields: [userId], references: [id])
+  saleProducts    SaleProduct[]
+  deliveryMethod  String
+  shippingAddress String?
+  postalCode      String?
+  shippingCost    Float?
 }
 
 enum PaymentMethod {
@@ -136,4 +136,10 @@ model SaleProduct {
   saleId    Int
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId Int
+}
+
+model PricingConfig {
+  id                    Int      @id @default(1)
+  providerMarkupPercent Decimal  @db.Decimal(5, 2)
+  updatedAt             DateTime @updatedAt
 }
