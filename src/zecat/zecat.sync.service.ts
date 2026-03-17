@@ -27,13 +27,13 @@ export class ZecatSyncService {
       await this.prisma.category.upsert({
         where: { externalId: String(cat.id) },
         update: {
-          name: cat.title ?? cat.name ?? 'Sin categoría',
+          name: cat.description ?? cat.title ?? cat.name ?? 'Sin categoría',
           imageUrl: cat.icon_url ?? cat.icon_active_url ?? '',
           source: Source.ZECAT,
           updatedAt: new Date(),
         },
         create: {
-          name: cat.title ?? cat.name ?? 'Sin categoría',
+          name: cat.description ?? cat.title ?? cat.name ?? 'Sin categoría',
           imageUrl: cat.icon_url ?? cat.icon_active_url ?? '',
           externalId: String(cat.id),
           source: Source.ZECAT,
@@ -124,11 +124,13 @@ export class ZecatSyncService {
       ? (productFromApi as any).families
       : []
 
-    const fam = famArr.length ? famArr[0] : null
-
-    const categoryExternalId = fam?.id != null ? String(fam.id) : 'UNCATEGORIZED'
-
-    const categoryName = fam?.title ?? fam?.name ?? 'Sin categoría'
+    const categories: Array<{ externalId: string; name: string }> =
+      famArr.length
+        ? famArr.map((fam: any) => ({
+          externalId: String(fam.id),
+          name: fam.description ?? fam.title ?? fam.name ?? 'Sin categoría',
+        }))
+        : [{ externalId: 'UNCATEGORIZED', name: 'Sin categoría' }]
 
     const imageUrls: string[] = Array.isArray((productFromApi as any).images)
       ? (productFromApi as any).images
@@ -148,10 +150,7 @@ export class ZecatSyncService {
       sku,
       stock,
       isActive,
-      category: {
-        externalId: categoryExternalId,
-        name: categoryName,
-      },
+      categories,
       imageUrls,
       attributes,
     }
@@ -176,23 +175,31 @@ export class ZecatSyncService {
     const rawFinalPrice = norm.price * factorNumber
     const finalPrice = this.roundTo2(rawFinalPrice)
 
-    const categoryRel: Prisma.ProductCreateInput['category'] = {
-      connectOrCreate: {
-        where: { externalId: norm.category.externalId },
-        create: {
-          name: norm.category.name,
-          imageUrl: '',
-          externalId: norm.category.externalId,
-          source: Source.ZECAT,
-        },
-      },
-    }
+    // 1. Upsert de todas las categorías, recolectando sus IDs de BD
+    const categoryIds: number[] = await Promise.all(
+      norm.categories.map(async (cat) => {
+        const record = await this.prisma.category.upsert({
+          where: { externalId: cat.externalId },
+          update: { name: cat.name, updatedAt: new Date() },
+          create: {
+            name: cat.name,
+            imageUrl: '',
+            externalId: cat.externalId,
+            source: Source.ZECAT,
+          },
+        })
+        return record.id
+      }),
+    )
+
+    // 2. Relación categories para create y update
+    const categoriesConnect = categoryIds.map((id) => ({ id }))
 
     const createData: Prisma.ProductCreateInput = {
       name: norm.name,
       description: norm.description,
       price: finalPrice,
-      category: categoryRel,
+      categories: { connect: categoriesConnect },
       stock: norm.stock,
       isActive: norm.isActive,
       sku: norm.sku,
@@ -204,12 +211,11 @@ export class ZecatSyncService {
       name: norm.name,
       description: norm.description,
       price: finalPrice,
-      stock: norm.stock,
+      categories: { set: categoriesConnect },
       isActive: norm.isActive,
       sku: norm.sku,
       source: Source.ZECAT,
       updatedAt: new Date(),
-      category: categoryRel,
     }
 
     const product = await this.prisma.product.upsert({
