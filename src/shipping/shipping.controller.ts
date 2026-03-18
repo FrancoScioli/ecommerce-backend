@@ -1,11 +1,11 @@
-import { Controller, Post, Body } from '@nestjs/common'
+import { Controller, Post, Body, Get } from '@nestjs/common'
 import { ShippingService } from './shipping.service'
 
 @Controller('shipping')
 export class ShippingController {
   constructor(private readonly shippingService: ShippingService) { }
 
-  @Post('methods')
+  @Get('methods')
   getMethods() {
     return this.shippingService.getShippingMethods()
   }
