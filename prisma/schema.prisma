@@ -21,6 +21,8 @@ model Category {
   source     Source    @default(INTERNAL)
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
+  lockName   Boolean   @default(false)
+  lockImage  Boolean   @default(false)
 }
 
 model Product {
@@ -111,13 +113,16 @@ model Sale {
   id              Int           @id @default(autoincrement())
   total           Float
   createdAt       DateTime      @default(now())
-  userId          Int
-  user            User          @relation(fields: [userId], references: [id])
+  userId          Int?
+  user            User?         @relation(fields: [userId], references: [id])
   saleProducts    SaleProduct[]
   deliveryMethod  String
   shippingAddress String?
   postalCode      String?
   shippingCost    Float?
+  customerName    String?
+  customerEmail   String?
+  customerPhone   String?
 }
 
 enum PaymentMethod {
@@ -136,10 +141,15 @@ model SaleProduct {
   saleId    Int
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId Int
+  variant   String?
 }
 
 model PricingConfig {
-  id                    Int      @id @default(1)
-  providerMarkupPercent Decimal  @db.Decimal(5, 2)
-  updatedAt             DateTime @updatedAt
+  id                     Int      @id @default(1)
+  providerMarkupPercent  Decimal  @db.Decimal(5, 2)
+  zecatSyncIntervalHours Int      @default(1)
+  salesEmail             String   @default("")
+  featuredCategoryIds    Json     @default("[]")
+  featuredProductIds     Json     @default("[]")
+  updatedAt              DateTime @updatedAt
 }

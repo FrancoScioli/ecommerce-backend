@@ -24,14 +24,18 @@ export class ZecatSyncService {
     }
 
     for (const cat of cats) {
+      const existing = await this.prisma.category.findUnique({
+        where: { externalId: String(cat.id) },
+        select: { lockName: true, lockImage: true },
+      })
+
+      const updateData: any = { source: Source.ZECAT, updatedAt: new Date() }
+      if (!existing?.lockName) updateData.name = cat.title ?? cat.name ?? 'Sin categoría'
+      if (!existing?.lockImage) updateData.imageUrl = cat.icon_url ?? cat.icon_active_url ?? ''
+
       await this.prisma.category.upsert({
         where: { externalId: String(cat.id) },
-        update: {
-          name: cat.title ?? cat.name ?? 'Sin categoría',
-          imageUrl: cat.icon_url ?? cat.icon_active_url ?? '',
-          source: Source.ZECAT,
-          updatedAt: new Date(),
-        },
+        update: updateData,
         create: {
           name: cat.title ?? cat.name ?? 'Sin categoría',
           imageUrl: cat.icon_url ?? cat.icon_active_url ?? '',
@@ -95,30 +99,31 @@ export class ZecatSyncService {
 
     const description = (productFromApi as any).description ?? ''
 
-    // Precio base del proveedor como number (porque Product.price es Float)
     const price = Number(
       (productFromApi as any).price ??
       (productFromApi as any).finalPrice ??
       0
     )
 
-    const sku = (productFromApi as any).sku
-      ? String((productFromApi as any).sku)
-      : null
+    const sku = (productFromApi as any).external_id
+      ? String((productFromApi as any).external_id)
+      : (productFromApi as any).sku
+        ? String((productFromApi as any).sku)
+        : null
 
-    const stockRaw =
-      (productFromApi as any).stock ??
-      (productFromApi as any).available ??
-      null
+    // Stock total = suma de stock de cada variante en products[]
+    const productsArr: any[] = Array.isArray((productFromApi as any).products)
+      ? (productFromApi as any).products
+      : []
 
-    const stock =
-      typeof stockRaw === 'number'
-        ? stockRaw
-        : stockRaw === true
-          ? 1
-          : null
+    const totalStock = productsArr.reduce(
+      (acc: number, p: any) => acc + (Number(p.stock) || 0),
+      0,
+    )
+    const stock = totalStock > 0 ? totalStock : null
 
-    const isActive = (stock ?? 0) > 0
+    // isActive viene del campo published de Zecat
+    const isActive = (productFromApi as any).published === true
 
     const famArr = Array.isArray((productFromApi as any).families)
       ? (productFromApi as any).families
@@ -128,7 +133,8 @@ export class ZecatSyncService {
 
     const categoryExternalId = fam?.id != null ? String(fam.id) : 'UNCATEGORIZED'
 
-    const categoryName = fam?.title ?? fam?.name ?? 'Sin categoría'
+    // En los families embebidos dentro del producto el nombre está en description
+    const categoryName = fam?.description ?? fam?.title ?? fam?.name ?? 'Sin categoría'
 
     const imageUrls: string[] = Array.isArray((productFromApi as any).images)
       ? (productFromApi as any).images
@@ -138,7 +144,23 @@ export class ZecatSyncService {
         ? [String((productFromApi as any).image)]
         : []
 
-    const attributes = (productFromApi as any).attributes ?? {}
+    // Variantes desde products[].element_description_1/2/3
+    const attributes: Record<string, string[]> = {}
+
+    const uniqueValues = (key: string): string[] =>
+      [...new Set<string>(
+        productsArr
+          .map((p: any) => String(p[key] ?? '').trim())
+          .filter((v) => v.length > 0 && v !== '.'),
+      )]
+
+    const colors = uniqueValues('element_description_1')
+    const sizes = uniqueValues('element_description_2')
+    const thirds = uniqueValues('element_description_3')
+
+    if (colors.length > 0) attributes['Color'] = colors
+    if (sizes.length > 0) attributes['Talle'] = sizes
+    if (thirds.length > 0) attributes['Variante'] = thirds
 
     return {
       externalId,

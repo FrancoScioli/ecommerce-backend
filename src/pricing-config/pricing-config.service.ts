@@ -33,25 +33,39 @@ export class PricingConfigService {
     return config
   }
 
-  /**
-   * Actualiza el porcentaje de recargo global.
-   */
   async updateConfig(dto: UpdatePricingConfigDto) {
-    const markup = new Prisma.Decimal(dto.providerMarkupPercent)
+    const updateData: Prisma.PricingConfigUpdateInput = {}
+    const createData: Prisma.PricingConfigCreateInput = { id: 1, providerMarkupPercent: new Prisma.Decimal(0) }
+
+    if (dto.providerMarkupPercent !== undefined) {
+      updateData.providerMarkupPercent = new Prisma.Decimal(dto.providerMarkupPercent)
+      createData.providerMarkupPercent = new Prisma.Decimal(dto.providerMarkupPercent)
+    }
+    if (dto.zecatSyncIntervalHours !== undefined) {
+      updateData.zecatSyncIntervalHours = dto.zecatSyncIntervalHours
+      createData.zecatSyncIntervalHours = dto.zecatSyncIntervalHours
+    }
+    if (dto.salesEmail !== undefined) {
+      updateData.salesEmail = dto.salesEmail
+      createData.salesEmail = dto.salesEmail
+    }
+    if (dto.featuredCategoryIds !== undefined) {
+      updateData.featuredCategoryIds = dto.featuredCategoryIds
+      createData.featuredCategoryIds = dto.featuredCategoryIds
+    }
+    if (dto.featuredProductIds !== undefined) {
+      updateData.featuredProductIds = dto.featuredProductIds
+      createData.featuredProductIds = dto.featuredProductIds
+    }
 
     const config = await this.prisma.pricingConfig.upsert({
       where: { id: 1 },
-      create: {
-        id: 1,
-        providerMarkupPercent: markup,
-      },
-      update: {
-        providerMarkupPercent: markup,
-      },
+      create: createData,
+      update: updateData,
     })
 
     this.logger.log(
-      `[updateConfig] Nuevo recargo proveedor: ${config.providerMarkupPercent.toString()}%`,
+      `[updateConfig] markup=${config.providerMarkupPercent}% syncInterval=${config.zecatSyncIntervalHours}h`,
     )
 
     return config
@@ -88,5 +102,41 @@ export class PricingConfigService {
     const ivaFactor = this.getIvaFactor()
 
     return markupFactor.mul(ivaFactor)
+  }
+
+  async getHomeData() {
+    const config = await this.getConfig()
+    const categoryIds: number[] = Array.isArray(config.featuredCategoryIds) ? config.featuredCategoryIds as number[] : []
+    const productIds: number[] = Array.isArray(config.featuredProductIds) ? config.featuredProductIds as number[] : []
+
+    const [categories, products] = await Promise.all([
+      categoryIds.length > 0
+        ? this.prisma.category.findMany({
+            where: { id: { in: categoryIds } },
+            select: { id: true, name: true, imageUrl: true },
+          })
+        : [],
+      productIds.length > 0
+        ? this.prisma.product.findMany({
+            where: { id: { in: productIds }, isActive: true },
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              images: { select: { url: true }, take: 1 },
+            },
+          })
+        : [],
+    ])
+
+    // Preserve the admin-defined order
+    const orderedCategories = categoryIds
+      .map((id) => (categories as any[]).find((c) => c.id === id))
+      .filter(Boolean)
+    const orderedProducts = productIds
+      .map((id) => (products as any[]).find((p) => p.id === id))
+      .filter(Boolean)
+
+    return { categories: orderedCategories, products: orderedProducts }
   }
 }

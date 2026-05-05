@@ -7,7 +7,7 @@ export class ZecatService {
     constructor(private readonly http: HttpService) { }
 
     async listCategories(page = 1, pageSize = 100): Promise<any> {
-        const params = { page, per_page: pageSize }
+        const params = { page, limit: pageSize }
         const { data } = await firstValueFrom(this.http.get('/family', { params }))
         return data
     }
@@ -23,7 +23,7 @@ export class ZecatService {
         count?: number
         [k: string]: any
     }> {
-        const params = { page, per_page: pageSize }
+        const params = { page, limit: pageSize }
         const { data } = await firstValueFrom(
             this.http.get('/generic_product', { params })
         )

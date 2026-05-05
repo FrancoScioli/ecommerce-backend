@@ -1,23 +1,42 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { Cron, CronExpression } from '@nestjs/schedule'
 import { ZecatSyncService } from './zecat.sync.service'
+import { PricingConfigService } from '../pricing-config/pricing-config.service'
 
 @Injectable()
 export class ZecatCronService {
   private readonly logger = new Logger(ZecatCronService.name)
-  constructor(private readonly zecatSync: ZecatSyncService) {}
+  private lastRunAt: Date | null = null
 
-  // Full sync diario 03:00
-  @Cron('0 3 * * *')
-  async nightly() {
-    this.logger.log('Cron Zecat nightly started')
-    await this.zecatSync.fullSync()
-    this.logger.log('Cron Zecat nightly done')
-  }
+  constructor(
+    private readonly zecatSync: ZecatSyncService,
+    private readonly pricingConfig: PricingConfigService,
+  ) {}
 
-  // Refresco liviano cada hora (productos: stock/precio)
   @Cron(CronExpression.EVERY_HOUR)
-  async hourly() {
-    await this.zecatSync.syncProducts()
+  async scheduledSync() {
+    const config = await this.pricingConfig.getConfig()
+    const intervalHours = config.zecatSyncIntervalHours ?? 1
+
+    if (this.lastRunAt) {
+      const elapsedMs = Date.now() - this.lastRunAt.getTime()
+      const elapsedHours = elapsedMs / (1000 * 60 * 60)
+      if (elapsedHours < intervalHours) {
+        this.logger.debug(
+          `Zecat sync skipped — ${elapsedHours.toFixed(2)}h elapsed, interval is ${intervalHours}h`,
+        )
+        return
+      }
+    }
+
+    this.logger.log(`Zecat auto-sync started (interval: ${intervalHours}h)`)
+    this.lastRunAt = new Date()
+
+    try {
+      await this.zecatSync.fullSync()
+      this.logger.log('Zecat auto-sync done')
+    } catch (err) {
+      this.logger.error('Zecat auto-sync failed', err)
+    }
   }
 }

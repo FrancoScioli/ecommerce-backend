@@ -21,11 +21,9 @@ export class CategoryService {
   constructor(private readonly prisma: PrismaService) { }
 
   async create(dto: CreateCategoryDto) {
-    if (!dto.name || !dto.imageUrl) {
-      throw new BadRequestException('Faltan datos obligatorios');
-    }
+    if (!dto.name) throw new BadRequestException('El nombre es obligatorio');
     return this.prisma.category.create({
-      data: { name: dto.name, imageUrl: dto.imageUrl },
+      data: { name: dto.name, imageUrl: dto.imageUrl ?? '' },
     });
   }
 
@@ -49,6 +47,8 @@ export class CategoryService {
       id: true,
       name: true,
       imageUrl: true,
+      lockName: true,
+      lockImage: true,
       ...(withCounts ? { _count: { select: { products: true } } } : {}),
     };
 
@@ -104,6 +104,15 @@ export class CategoryService {
       return category;
     }
   }
+  async update(id: number, data: { name?: string; imageUrl?: string; lockName?: boolean; lockImage?: boolean }) {
+    const updateData: Prisma.CategoryUpdateInput = {}
+    if (data.name !== undefined) updateData.name = data.name
+    if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl
+    if (data.lockName !== undefined) updateData.lockName = data.lockName
+    if (data.lockImage !== undefined) updateData.lockImage = data.lockImage
+    return this.prisma.category.update({ where: { id }, data: updateData })
+  }
+
   async remove(id: number): Promise<boolean> {
     const count = await this.prisma.product.count({ where: { categoryId: id } });
     if (count) {

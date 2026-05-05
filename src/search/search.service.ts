@@ -18,16 +18,14 @@ export class SearchService {
         const take = typeof limit === 'number' ? limit : 5
         const normalizedQ = normalizeString(q)
 
-        // Productos candidatos + filtro normalizado 
+        // Búsqueda solo por nombre — la descripción generaba falsos positivos
         const rawProducts = await this.prisma.product.findMany({
             where: {
-                OR: [
-                    { name: { contains: q, mode: 'insensitive' } },
-                    { description: { contains: q, mode: 'insensitive' } },
-                ],
+                isActive: true,
+                name: { contains: q, mode: 'insensitive' },
             },
             select: { id: true, name: true, price: true, categoryId: true },
-            take: take * 3,
+            take: take * 10,
         })
 
         const products = rawProducts
@@ -65,6 +63,7 @@ export class SearchService {
             name: p.name,
             price: p.price,
             imageUrl: firstImageByProduct.get(p.id) ?? null,
+            categoryId: p.categoryId ?? null,
             categoryName: p.categoryId ? categoryMap.get(p.categoryId) ?? null : null,
         }))
 

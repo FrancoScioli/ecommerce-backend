@@ -1,8 +1,29 @@
-import { IsNumber, Max, Min } from 'class-validator'
+import { IsArray, IsEmail, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator'
 
 export class UpdatePricingConfigDto {
+    @IsOptional()
     @IsNumber({ maxDecimalPlaces: 2 })
     @Min(0)
     @Max(100)
-    providerMarkupPercent: number // Ej: 10 = +10%
+    providerMarkupPercent?: number
+
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    @Max(48)
+    zecatSyncIntervalHours?: number
+
+    @IsOptional()
+    @IsString()
+    salesEmail?: string
+
+    @IsOptional()
+    @IsArray()
+    @IsInt({ each: true })
+    featuredCategoryIds?: number[]
+
+    @IsOptional()
+    @IsArray()
+    @IsInt({ each: true })
+    featuredProductIds?: number[]
 }

@@ -55,6 +55,14 @@ export class S3Service {
       ContentType: file.mimetype,
     };
 
+    // En dev con credenciales dummy, devuelve un placeholder en lugar de fallar
+    if (
+      this.config.get('AWS_ACCESS_KEY_ID') === 'dummy' ||
+      this.config.get('AWS_SECRET_ACCESS_KEY') === 'dummy'
+    ) {
+      return `https://placehold.co/400x300/e2e8f0/64748b?text=${encodeURIComponent(file.originalname.split('.')[0])}`;
+    }
+
     try {
       await this.client.send(new PutObjectCommand(params));
       return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;

@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config'
 import { PrismaModule } from '../prisma/prisma.module'
 import { ZecatService } from './zecat.service'
 import { ZecatSyncService } from './zecat.sync.service'
+import { ZecatCronService } from './zecat.cron.service'
 import { AdminZecatSyncController } from './admin.sync.controller'
 import { PricingConfigModule } from 'src/pricing-config/pricing-config.module'
 
@@ -26,7 +27,7 @@ import { PricingConfigModule } from 'src/pricing-config/pricing-config.module'
     }),
   ],
   controllers: [AdminZecatSyncController],
-  providers: [ZecatService, ZecatSyncService],
+  providers: [ZecatService, ZecatSyncService, ZecatCronService],
   exports: [ZecatService, ZecatSyncService],
 })
 export class ZecatModule { }

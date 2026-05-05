@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CategoryModule } from './categories/category.module';
@@ -17,16 +18,18 @@ import { ShippingModule } from './shipping/shipping.module';
 import { ZecatModule } from './zecat/zecat.module';
 import { SearchModule } from './search/search.module';
 import { PricingConfigModule } from './pricing-config/pricing-config.module';
+import { ImportModule } from './import/import.module';
 
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ 
+    ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: process.env.NODE_ENV === 'production' 
-        ? '/etc/secrets/.env' 
+      envFilePath: process.env.NODE_ENV === 'production'
+        ? '/etc/secrets/.env'
         : '.env'
       }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     CategoryModule,
     S3Module,
@@ -41,7 +44,8 @@ import { PricingConfigModule } from './pricing-config/pricing-config.module';
     ShippingModule,
     ZecatModule,
     SearchModule,
-    PricingConfigModule
+    PricingConfigModule,
+    ImportModule,
   ],
   controllers: [AppController],
   providers: [AppService],
