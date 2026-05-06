@@ -36,6 +36,7 @@ model Product {
   variants     Variant[]
   cartItems    CartItem[]
   saleProducts SaleProduct[]
+  printingTypes PrintingType[]
 
   externalId String?  @unique // id de Zecat
   source     Source   @default(INTERNAL)
@@ -44,6 +45,22 @@ model Product {
   isActive   Boolean  @default(true) // para ocultar manualmente
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+model PrintingType {
+  id                  Int     @id @default(autoincrement())
+  product             Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId           Int
+  externalId          String
+  name                String
+  setupPrice          Float   @default(0)
+  unitPrice           Float   @default(0)
+  minUnits            Int     @default(1)
+  baseTime            Int     @default(0)
+  occupation          Int     @default(0)
+  dayFactor           Float   @default(0)
+
+  @@unique([productId, externalId])
 }
 
 model Variant {

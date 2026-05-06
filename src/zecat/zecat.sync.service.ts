@@ -258,6 +258,39 @@ export class ZecatSyncService {
       }
     }
 
+    // Técnicas de impresión
+    const printingTypesRaw: any[] = Array.isArray((productFromApi as any).printing_types)
+      ? (productFromApi as any).printing_types
+      : []
+
+    for (const pt of printingTypesRaw) {
+      const extId = String(pt.id ?? '')
+      if (!extId) continue
+      await this.prisma.printingType.upsert({
+        where: { productId_externalId: { productId: product.id, externalId: extId } },
+        create: {
+          productId: product.id,
+          externalId: extId,
+          name: pt.name ?? 'Técnica',
+          setupPrice: Number(pt.setup_price ?? 0),
+          unitPrice: Number(pt.unit_price ?? 0),
+          minUnits: Number(pt.min_units_for_printing ?? 1) || 1,
+          baseTime: Number(pt.base_time ?? 0),
+          occupation: Number(pt.ocupation ?? 0),
+          dayFactor: Number(pt.day_factor ?? 0),
+        },
+        update: {
+          name: pt.name ?? 'Técnica',
+          setupPrice: Number(pt.setup_price ?? 0),
+          unitPrice: Number(pt.unit_price ?? 0),
+          minUnits: Number(pt.min_units_for_printing ?? 1) || 1,
+          baseTime: Number(pt.base_time ?? 0),
+          occupation: Number(pt.ocupation ?? 0),
+          dayFactor: Number(pt.day_factor ?? 0),
+        },
+      })
+    }
+
     // Variantes (atributos)
     for (const [attrName, rawValues] of Object.entries(norm.attributes)) {
       const variantName = String(attrName).trim()

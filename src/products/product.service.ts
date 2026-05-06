@@ -114,7 +114,8 @@ export class ProductService {
         category: true,
         variants: {
           include: { options: true }
-        }
+        },
+        printingTypes: true,
       }
     });
     if (!product) throw new NotFoundException(`Product with id ${id} not found`);
