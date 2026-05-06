@@ -28,6 +28,9 @@ export class MailService {
         secure: port === 465,
         auth: { user, pass },
       })
+      this.logger.log(`[Mail] Transporter creado — host=${host} port=${port} user=${user}`)
+    } else {
+      this.logger.warn(`[Mail] Transporter NO creado — SMTP_HOST=${host} SMTP_USER=${user}`)
     }
   }
 
@@ -40,7 +43,13 @@ export class MailService {
       return
     }
 
-    await this.transporter.sendMail({ from, to, subject, html })
+    try {
+      const info = await this.transporter.sendMail({ from, to, subject, html })
+      this.logger.log(`[Mail] Enviado a ${to} | messageId=${info.messageId}`)
+    } catch (err) {
+      this.logger.error(`[Mail] Error enviando a ${to}: ${(err as Error).message}`)
+      throw err
+    }
   }
 
   async sendOrderToAdmin(adminEmail: string, data: OrderMailData) {
