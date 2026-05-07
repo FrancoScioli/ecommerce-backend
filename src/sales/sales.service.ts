@@ -8,6 +8,7 @@ export interface PlaceOrderDto {
   customerName: string
   customerEmail: string
   customerPhone: string
+  userId?: number | null
   items: { productId: number; quantity: number; variant?: string }[]
 }
 
@@ -114,6 +115,7 @@ export class SalesService {
         customerName: dto.customerName,
         customerEmail: dto.customerEmail,
         customerPhone: dto.customerPhone,
+        userId: dto.userId ?? null,
         saleProducts: {
           create: dto.items.flatMap((item) =>
             Array.from({ length: item.quantity }, () => ({
