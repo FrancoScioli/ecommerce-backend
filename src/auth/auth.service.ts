@@ -99,6 +99,30 @@ export class AuthService {
     return this.getTokens(user.id, user.email, user.role, user.firstName, user.lastName);
   }
 
+  async getMe(userId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, firstName: true, lastName: true, phone: true, role: true },
+    })
+    if (!user) throw new UnauthorizedException('Usuario no encontrado')
+    return user
+  }
+
+  async updateMe(userId: number, dto: { firstName?: string; lastName?: string; phone?: string; password?: string }) {
+    const data: any = {}
+    if (dto.firstName) data.firstName = dto.firstName
+    if (dto.lastName) data.lastName = dto.lastName
+    if (dto.phone !== undefined) data.phone = dto.phone
+    if (dto.password) data.password = await bcrypt.hash(dto.password, 10)
+
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data,
+      select: { id: true, email: true, firstName: true, lastName: true, phone: true, role: true },
+    })
+    return user
+  }
+
   async refreshToken(token: string | undefined) {
     if (!token) return null;
 

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UnauthorizedException, UseGuards, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, UnauthorizedException, UseGuards, BadRequestException, Request } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { RolesGuard } from './roles.guard';
@@ -48,6 +48,18 @@ export class AuthController {
     });
   }
 
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  async getMe(@Request() req: any) {
+    return this.authService.getMe(req.user.userId ?? req.user.sub)
+  }
+
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  async updateMe(@Request() req: any, @Body() body: { firstName?: string; lastName?: string; phone?: string; password?: string }) {
+    return this.authService.updateMe(req.user.userId ?? req.user.sub, body)
+  }
 
   @Post('refresh')
   async refresh(@Body('refreshToken') refreshToken: string) {
