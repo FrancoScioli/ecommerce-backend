@@ -66,7 +66,15 @@ export class ZecatSyncService {
 
       for (const productFromApi of items) {
         try {
-          await this.upsertProductFromZecat(productFromApi as ZecatProduct, priceFactor)
+          let fullProduct = productFromApi as ZecatProduct
+          if ((productFromApi as any).hasPrintingType === true) {
+            const externalId = (productFromApi as any).id ?? (productFromApi as any).code
+            if (externalId) {
+              const detail = await this.zecat.getProduct(externalId)
+              if (detail) fullProduct = detail
+            }
+          }
+          await this.upsertProductFromZecat(fullProduct, priceFactor)
         } catch (error) {
           this.logger.error('[syncProducts] Error procesando producto Zecat', {
             productFromApi,

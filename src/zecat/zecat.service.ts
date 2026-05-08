@@ -29,4 +29,11 @@ export class ZecatService {
         )
         return data
     }
+
+    async getProduct(id: string | number): Promise<any> {
+        const { data } = await firstValueFrom(
+            this.http.get(`/generic_product/${id}`)
+        )
+        return data
+    }
 }
