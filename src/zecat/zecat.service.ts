@@ -34,6 +34,7 @@ export class ZecatService {
         const { data } = await firstValueFrom(
             this.http.get(`/generic_product/${id}`)
         )
-        return data
+        // El endpoint de detalle devuelve { generic_product: {...} }
+        return data?.generic_product ?? data
     }
 }
