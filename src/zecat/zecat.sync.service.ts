@@ -67,11 +67,17 @@ export class ZecatSyncService {
       for (const productFromApi of items) {
         try {
           let fullProduct = productFromApi as ZecatProduct
-          if ((productFromApi as any).hasPrintingType === true) {
-            const externalId = (productFromApi as any).id ?? (productFromApi as any).code
-            if (externalId) {
-              const detail = await this.zecat.getProduct(externalId)
-              if (detail) fullProduct = detail
+          const extId = (productFromApi as any).id ?? (productFromApi as any).code
+          if (extId) {
+            try {
+              const detail = await this.zecat.getProduct(extId)
+              if (detail) {
+                const ptCount = detail?.printing_types?.length ?? 0
+                if (ptCount > 0) this.logger.log(`[sync] id=${extId} printing_types=${ptCount}`)
+                fullProduct = detail
+              }
+            } catch {
+              // si falla el detalle, usar el producto del listado
             }
           }
           await this.upsertProductFromZecat(fullProduct, priceFactor)
@@ -162,13 +168,27 @@ export class ZecatSyncService {
           .filter((v) => v.length > 0 && v !== '.'),
       )]
 
-    const colors = uniqueValues('element_description_1')
-    const sizes = uniqueValues('element_description_2')
-    const thirds = uniqueValues('element_description_3')
+    // Obtener nombres reales de atributos desde el primer producto del array
+    const firstProduct = productsArr[0] as any
+    const attr1Name = firstProduct?.attribute_description_1?.trim() || firstProduct?.attribute_1?.trim() || 'Color'
+    const attr2Name = firstProduct?.attribute_description_2?.trim() || firstProduct?.attribute_2?.trim() || null
+    const attr3Name = firstProduct?.attribute_description_3?.trim() || firstProduct?.attribute_3?.trim() || null
 
-    if (colors.length > 0) attributes['Color'] = colors
-    if (sizes.length > 0) attributes['Talle'] = sizes
-    if (thirds.length > 0) attributes['Variante'] = thirds
+    const values1 = uniqueValues('element_description_1')
+    const values2 = uniqueValues('element_description_2')
+    const values3 = uniqueValues('element_description_3')
+
+    // Solo agregar si tiene más de un valor único, o si es el atributo principal (attr1)
+    if (values1.length > 0) attributes[attr1Name] = values1
+    // attr2 y attr3: solo si tiene nombre real distinto al anterior y valores distintos a los de attr1
+    if (attr2Name && attr2Name !== attr1Name && values2.length > 0) {
+      const distinctValues2 = values2.filter(v => !values1.includes(v))
+      if (distinctValues2.length > 0) attributes[attr2Name] = distinctValues2
+    }
+    if (attr3Name && attr3Name !== attr1Name && attr3Name !== attr2Name && values3.length > 0) {
+      const distinctValues3 = values3.filter(v => !values1.includes(v) && !values2.includes(v))
+      if (distinctValues3.length > 0) attributes[attr3Name] = distinctValues3
+    }
 
     return {
       externalId,
