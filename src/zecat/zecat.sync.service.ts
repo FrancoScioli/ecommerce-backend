@@ -181,12 +181,14 @@ export class ZecatSyncService {
     // Solo agregar si tiene más de un valor único, o si es el atributo principal (attr1)
     if (values1.length > 0) attributes[attr1Name] = values1
     // attr2 y attr3: solo si tiene nombre real distinto al anterior y valores distintos a los de attr1
+    const lowerSet1 = new Set(values1.map(v => v.toLowerCase()))
     if (attr2Name && attr2Name !== attr1Name && values2.length > 0) {
-      const distinctValues2 = values2.filter(v => !values1.includes(v))
+      const distinctValues2 = values2.filter(v => !lowerSet1.has(v.toLowerCase()))
       if (distinctValues2.length > 0) attributes[attr2Name] = distinctValues2
     }
+    const lowerSet2 = new Set(values2.map(v => v.toLowerCase()))
     if (attr3Name && attr3Name !== attr1Name && attr3Name !== attr2Name && values3.length > 0) {
-      const distinctValues3 = values3.filter(v => !values1.includes(v) && !values2.includes(v))
+      const distinctValues3 = values3.filter(v => !lowerSet1.has(v.toLowerCase()) && !lowerSet2.has(v.toLowerCase()))
       if (distinctValues3.length > 0) attributes[attr3Name] = distinctValues3
     }
 
@@ -319,43 +321,32 @@ export class ZecatSyncService {
       })
     }
 
-    // Variantes (atributos)
+    // Variantes: borrar todas y recrear desde cero para mantener sincronía con Zecat
+    await this.prisma.variantOption.deleteMany({
+      where: { variant: { productId: product.id } },
+    })
+    await this.prisma.variant.deleteMany({
+      where: { productId: product.id },
+    })
+
     for (const [attrName, rawValues] of Object.entries(norm.attributes)) {
       const variantName = String(attrName).trim()
-      if (!variantName || !Array.isArray(rawValues) || rawValues.length === 0)
-        continue
+      if (!variantName || !Array.isArray(rawValues) || rawValues.length === 0) continue
 
-      let variantId: number
-      const existingVariant = product.variants.find(
-        (v) => v.name === variantName,
-      )
-      if (existingVariant) {
-        variantId = existingVariant.id
-      } else {
-        const created = await this.prisma.variant.create({
-          data: { productId: product.id, name: variantName },
-        })
-        variantId = created.id
-      }
-
-      const existingOptions = await this.prisma.variantOption.findMany({
-        where: { variantId },
-        select: { value: true },
-      })
-      const existingSet = new Set(
-        existingOptions.map((o) => o.value.trim().toLowerCase()),
-      )
-
-      const valuesToCreate = (rawValues as string[])
+      const values = (rawValues as string[])
         .map((v) => String(v ?? '').trim())
-        .filter((v) => v.length > 0 && !existingSet.has(v.toLowerCase()))
+        .filter((v) => v.length > 0)
 
-      if (valuesToCreate.length) {
-        await this.prisma.variantOption.createMany({
-          data: valuesToCreate.map((value) => ({ variantId, value })),
-          skipDuplicates: true,
-        })
-      }
+      if (!values.length) continue
+
+      const variant = await this.prisma.variant.create({
+        data: { productId: product.id, name: variantName },
+      })
+
+      await this.prisma.variantOption.createMany({
+        data: values.map((value) => ({ variantId: variant.id, value })),
+        skipDuplicates: true,
+      })
     }
   }
 
