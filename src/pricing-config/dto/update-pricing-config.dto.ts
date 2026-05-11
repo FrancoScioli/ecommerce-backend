@@ -14,6 +14,12 @@ export class UpdatePricingConfigDto {
     zecatSyncIntervalHours?: number
 
     @IsOptional()
+    @IsInt()
+    @Min(0)
+    @Max(23)
+    zecatDetailSyncHour?: number
+
+    @IsOptional()
     @IsString()
     salesEmail?: string
 

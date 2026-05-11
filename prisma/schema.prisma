@@ -162,11 +162,12 @@ model SaleProduct {
 }
 
 model PricingConfig {
-  id                     Int      @id @default(1)
-  providerMarkupPercent  Decimal  @db.Decimal(5, 2)
-  zecatSyncIntervalHours Int      @default(1)
-  salesEmail             String   @default("")
-  featuredCategoryIds    Json     @default("[]")
-  featuredProductIds     Json     @default("[]")
-  updatedAt              DateTime @updatedAt
+  id                       Int      @id @default(1)
+  providerMarkupPercent    Decimal  @db.Decimal(5, 2)
+  zecatSyncIntervalHours   Int      @default(1)
+  zecatDetailSyncHour      Int      @default(23)
+  salesEmail               String   @default("")
+  featuredCategoryIds      Json     @default("[]")
+  featuredProductIds       Json     @default("[]")
+  updatedAt                DateTime @updatedAt
 }

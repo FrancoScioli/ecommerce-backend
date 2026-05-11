@@ -45,6 +45,10 @@ export class PricingConfigService {
       updateData.zecatSyncIntervalHours = dto.zecatSyncIntervalHours
       createData.zecatSyncIntervalHours = dto.zecatSyncIntervalHours
     }
+    if (dto.zecatDetailSyncHour !== undefined) {
+      updateData.zecatDetailSyncHour = dto.zecatDetailSyncHour
+      createData.zecatDetailSyncHour = dto.zecatDetailSyncHour
+    }
     if (dto.salesEmail !== undefined) {
       updateData.salesEmail = dto.salesEmail
       createData.salesEmail = dto.salesEmail

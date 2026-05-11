@@ -11,9 +11,10 @@ export class AdminZecatSyncController {
   constructor(private readonly zecatSync: ZecatSyncService) {}
 
   @Post('sync')
-  async sync(@Query('scope') scope: 'all' | 'categories' | 'products' = 'all') {
+  async sync(@Query('scope') scope: 'all' | 'categories' | 'products' | 'fast' = 'all') {
     if (scope === 'categories') await this.zecatSync.syncCategories()
     else if (scope === 'products') await this.zecatSync.syncProducts()
+    else if (scope === 'fast') await this.zecatSync.syncCategoriesAndProductsFast()
     else await this.zecatSync.fullSync()
     return { ok: true, message: `Sync ${scope} disparado` }
   }

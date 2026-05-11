@@ -46,14 +46,48 @@ export class ZecatSyncService {
     }
   }
 
-  async syncProducts() {
+  // Sync rápido: usa datos del listado genérico, sin llamar al endpoint de detalle por producto.
+  // Recomendado por Zecat para sincronizaciones frecuentes (cada hora).
+  async syncProductsFast() {
     let page = 1
-    const pageSize = Number(process.env.ZECAT_SYNC_PAGE_SIZE ?? 100)
+    const pageSize = Number(process.env.ZECAT_SYNC_PAGE_SIZE ?? 50)
 
-    // Factor total = (1 + markup/100) * 1.21 IVA
     const priceFactor = await this.getPriceFactorSafe()
     this.logger.log(
-      `[syncProducts] Usando factor total de precio (markup + IVA): ${priceFactor.toString()}`,
+      `[syncProductsFast] Factor de precio: ${priceFactor.toString()}`,
+    )
+
+    while (true) {
+      const list: any = await this.zecat.listProducts(page, pageSize)
+      const itemsRaw = (list as any)?.genericProducts ?? (list as any)?.generic_products
+      const items: any[] = Array.isArray(itemsRaw) ? itemsRaw : []
+
+      if (items.length === 0) break
+
+      for (const productFromApi of items) {
+        try {
+          await this.upsertProductFromZecat(productFromApi as ZecatProduct, priceFactor)
+        } catch (error) {
+          this.logger.error('[syncProductsFast] Error procesando producto', { productFromApi })
+          this.logger.error(error as any)
+        }
+      }
+
+      if (items.length < pageSize) break
+      page++
+    }
+  }
+
+  // Sync completo: llama al endpoint de detalle por cada producto para obtener
+  // fotos de variantes, técnicas de impresión y datos de producción.
+  // Recomendado por Zecat solo entre las 23 hs y las 6 hs.
+  async syncProducts() {
+    let page = 1
+    const pageSize = Number(process.env.ZECAT_SYNC_PAGE_SIZE ?? 50)
+
+    const priceFactor = await this.getPriceFactorSafe()
+    this.logger.log(
+      `[syncProducts] Factor de precio: ${priceFactor.toString()}`,
     )
 
     while (true) {
@@ -364,10 +398,18 @@ export class ZecatSyncService {
     }
   }
 
+  async syncCategoriesAndProductsFast() {
+    this.logger.log('[fastSync] Sincronizando categorías…')
+    await this.syncCategories()
+    this.logger.log('[fastSync] Sincronizando productos (rápido)…')
+    await this.syncProductsFast()
+    this.logger.log('[fastSync] OK')
+  }
+
   async fullSync() {
     this.logger.log('Sincronizando categorías…')
     await this.syncCategories()
-    this.logger.log('Sincronizando productos…')
+    this.logger.log('Sincronizando productos (completo)…')
     await this.syncProducts()
     this.logger.log('OK')
   }
