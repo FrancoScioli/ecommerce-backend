@@ -109,11 +109,13 @@ export class ProductController {
       try {
         const parsed = JSON.parse(b.variants)
         dto.variants = (Array.isArray(parsed) ? parsed : [])
-          .map((v: { name?: string; options?: string[] }) => ({
+          .map((v: { name?: string; options?: (string | { value?: string })[] }) => ({
             name: v.name?.trim() ?? '',
-            options: (Array.isArray(v.options) ? v.options : []).map((o: string) => String(o).trim()).filter(Boolean),
+            options: (Array.isArray(v.options) ? v.options : [])
+              .map((o) => ({ value: typeof o === 'string' ? o.trim() : String((o as { value?: string }).value ?? '').trim() }))
+              .filter((o) => o.value.length > 0),
           }))
-          .filter((v: { name: string; options: string[] }) => v.name && v.options.length > 0)
+          .filter((v) => v.name && v.options.length > 0)
       } catch { /* ignorar variantes inválidas */ }
     }
     return this.productService.update(id, dto, images)
