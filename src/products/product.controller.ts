@@ -88,13 +88,45 @@ export class ProductController {
   }
 
   @Put(':id')
-  @UseInterceptors(FilesInterceptor('images', 5)) 
+  @UseInterceptors(FilesInterceptor('images', 5))
   update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateProductDto,
+    @Body('name') name: string,
+    @Body('description') description: string,
+    @Body('price') priceStr: string,
+    @Body('categoryId') catStr: string,
+    @Body('isActive') isActiveStr: string,
+    @Body('coverImageId') coverImageIdStr: string,
+    @Body('variants') variantsRaw: string,
     @UploadedFiles() images: Express.Multer.File[] = [],
   ) {
-    // images es opcional
+    const dto: UpdateProductDto = {}
+    if (name !== undefined) dto.name = name
+    if (description !== undefined) dto.description = description
+    if (priceStr !== undefined) {
+      const p = parseFloat(priceStr)
+      if (!isNaN(p)) dto.price = p
+    }
+    if (catStr !== undefined) {
+      const c = parseInt(catStr, 10)
+      if (!isNaN(c)) dto.categoryId = c
+    }
+    if (isActiveStr !== undefined) dto.isActive = isActiveStr === 'true'
+    if (coverImageIdStr !== undefined) {
+      const cid = parseInt(coverImageIdStr, 10)
+      if (!isNaN(cid)) dto.coverImageId = cid
+    }
+    if (variantsRaw) {
+      try {
+        const parsed = JSON.parse(variantsRaw)
+        dto.variants = (Array.isArray(parsed) ? parsed : []).map((v: { name?: string; options?: string[] }) => ({
+          name: v.name?.trim() ?? '',
+          options: (Array.isArray(v.options) ? v.options : []).map((o: string) => o?.trim()).filter(Boolean),
+        })).filter((v: { name: string; options: string[] }) => v.name && v.options.length > 0)
+      } catch {
+        // variantes inválidas, ignorar
+      }
+    }
     return this.productService.update(id, dto, images)
   }
 }
