@@ -204,9 +204,27 @@ export class ZecatSyncService {
 
     // Obtener nombres reales de atributos desde el primer producto del array
     const firstProduct = productsArr[0] as any
-    const attr1Name = firstProduct?.attribute_description_1?.trim() || firstProduct?.attribute_1?.trim() || 'Color'
-    const attr2Name = firstProduct?.attribute_description_2?.trim() || firstProduct?.attribute_2?.trim() || null
-    const attr3Name = firstProduct?.attribute_description_3?.trim() || firstProduct?.attribute_3?.trim() || null
+    const isUsableName = (v: unknown): boolean => {
+      const s = String(v ?? '').trim()
+      return s.length > 0 && !/^\d+$/.test(s)
+    }
+    const attr1Desc = firstProduct?.attribute_description_1
+    const attr1Raw = firstProduct?.attribute_1
+    const attr1Name = isUsableName(attr1Desc) ? String(attr1Desc).trim()
+      : isUsableName(attr1Raw) ? String(attr1Raw).trim()
+      : 'Color'
+
+    const attr2Desc = firstProduct?.attribute_description_2
+    const attr2Raw = firstProduct?.attribute_2
+    const attr2Name = isUsableName(attr2Desc) ? String(attr2Desc).trim()
+      : isUsableName(attr2Raw) ? String(attr2Raw).trim()
+      : null
+
+    const attr3Desc = firstProduct?.attribute_description_3
+    const attr3Raw = firstProduct?.attribute_3
+    const attr3Name = isUsableName(attr3Desc) ? String(attr3Desc).trim()
+      : isUsableName(attr3Raw) ? String(attr3Raw).trim()
+      : null
 
     const values1 = uniqueValues('element_description_1')
     const values2 = uniqueValues('element_description_2')
@@ -355,7 +373,12 @@ export class ZecatSyncService {
       })
     }
 
-    // Variantes: borrar todas y recrear desde cero para mantener sincronía con Zecat
+    // Variantes: solo sincronizar si hay datos de atributos disponibles
+    // Si attributes está vacío (ej: productos sin products[] en la respuesta), no tocar las variantes existentes
+    if (Object.keys(norm.attributes).length === 0) {
+      return
+    }
+
     await this.prisma.variantOption.deleteMany({
       where: { variant: { productId: product.id } },
     })
