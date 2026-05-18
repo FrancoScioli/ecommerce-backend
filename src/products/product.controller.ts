@@ -3,7 +3,9 @@ import {
   UseGuards, UseInterceptors, UploadedFiles, BadRequestException,
   Query,
   Put,
-  ParseIntPipe
+  ParseIntPipe,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { FileFieldsInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -88,6 +90,7 @@ export class ProductController {
   }
 
   @Put(':id')
+  @UsePipes(new ValidationPipe({ transform: true, skipMissingProperties: true, whitelist: true }))
   @UseInterceptors(FilesInterceptor('images', 5))
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -100,32 +103,23 @@ export class ProductController {
     @Body('variants') variantsRaw: string,
     @UploadedFiles() images: Express.Multer.File[] = [],
   ) {
-    const dto: UpdateProductDto = {}
+    const dto: UpdateProductDto = new UpdateProductDto()
     if (name !== undefined) dto.name = name
     if (description !== undefined) dto.description = description
-    if (priceStr !== undefined) {
-      const p = parseFloat(priceStr)
-      if (!isNaN(p)) dto.price = p
-    }
-    if (catStr !== undefined) {
-      const c = parseInt(catStr, 10)
-      if (!isNaN(c)) dto.categoryId = c
-    }
+    if (priceStr !== undefined) { const p = parseFloat(priceStr); if (!isNaN(p)) dto.price = p }
+    if (catStr !== undefined) { const c = parseInt(catStr, 10); if (!isNaN(c)) dto.categoryId = c }
     if (isActiveStr !== undefined) dto.isActive = isActiveStr === 'true'
-    if (coverImageIdStr !== undefined) {
-      const cid = parseInt(coverImageIdStr, 10)
-      if (!isNaN(cid)) dto.coverImageId = cid
-    }
+    if (coverImageIdStr !== undefined) { const cid = parseInt(coverImageIdStr, 10); if (!isNaN(cid)) dto.coverImageId = cid }
     if (variantsRaw) {
       try {
         const parsed = JSON.parse(variantsRaw)
-        dto.variants = (Array.isArray(parsed) ? parsed : []).map((v: { name?: string; options?: string[] }) => ({
-          name: v.name?.trim() ?? '',
-          options: (Array.isArray(v.options) ? v.options : []).map((o: string) => o?.trim()).filter(Boolean),
-        })).filter((v: { name: string; options: string[] }) => v.name && v.options.length > 0)
-      } catch {
-        // variantes inválidas, ignorar
-      }
+        dto.variants = (Array.isArray(parsed) ? parsed : [])
+          .map((v: { name?: string; options?: string[] }) => ({
+            name: v.name?.trim() ?? '',
+            options: (Array.isArray(v.options) ? v.options : []).map((o: string) => o?.trim()).filter(Boolean),
+          }))
+          .filter((v: { name: string; options: string[] }) => v.name && v.options.length > 0)
+      } catch { /* ignorar variantes inválidas */ }
     }
     return this.productService.update(id, dto, images)
   }
