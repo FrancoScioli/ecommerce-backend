@@ -94,15 +94,32 @@ export class ProductService {
   }
 
   async findMany(categoryId?: number) {
-    return this.prisma.product.findMany({
-      where: categoryId ? { categoryId } : undefined,
+    const products = await this.prisma.product.findMany({
+      where: {
+        isActive: true,
+        ...(categoryId ? { categoryId } : {}),
+      },
       include: {
         images: true,
         category: true,
-        variants: {
-          include: { options: true }
-        }
+        variants: { include: { options: true } }
       }
+    });
+    // Portada primero en cada producto
+    for (const p of products) {
+      if (p.coverImageId) {
+        p.images.sort((a, b) =>
+          a.id === p.coverImageId ? -1 : b.id === p.coverImageId ? 1 : 0
+        )
+      }
+    }
+    return products;
+  }
+
+  async findAllAdmin(): Promise<Product[]> {
+    return this.prisma.product.findMany({
+      include: { images: true, category: true, variants: { include: { options: true } } },
+      orderBy: { updatedAt: 'desc' },
     });
   }
 
@@ -112,13 +129,17 @@ export class ProductService {
       include: {
         images: true,
         category: true,
-        variants: {
-          include: { options: true }
-        },
+        variants: { include: { options: true } },
         printingTypes: true,
       }
     });
     if (!product) throw new NotFoundException(`Product with id ${id} not found`);
+    // Portada primero
+    if (product.coverImageId) {
+      product.images.sort((a, b) =>
+        a.id === product.coverImageId ? -1 : b.id === product.coverImageId ? 1 : 0
+      )
+    }
     return product;
   }
 
@@ -155,8 +176,7 @@ export class ProductService {
     if (dto.sku !== undefined) data.sku = dto.sku
     if (dto.stock !== undefined) data.stock = dto.stock
     if (dto.isActive !== undefined) data.isActive = dto.isActive
-    // Si querés asegurarte de mantener el source:
-    // if (!existing.source) data.source = Source.MANUAL  // o el que corresponda
+    if (dto.coverImageId !== undefined) data.coverImageId = dto.coverImageId
 
     const updated = await this.prisma.product.update({
       where: { id },

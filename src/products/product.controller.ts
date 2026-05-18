@@ -21,6 +21,12 @@ export class ProductController {
     return this.productService.findMany(id);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get('admin/all')
+  async findAllAdmin() {
+    return this.productService.findAllAdmin();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.productService.findOne(+id);

@@ -6,8 +6,6 @@ import { PricingConfigService } from '../pricing-config/pricing-config.service'
 @Injectable()
 export class ZecatCronService {
   private readonly logger = new Logger(ZecatCronService.name)
-  private lastFastRunAt: Date | null = null
-  private lastDetailRunAt: Date | null = null
 
   constructor(
     private readonly zecatSync: ZecatSyncService,
@@ -20,8 +18,8 @@ export class ZecatCronService {
     const config = await this.pricingConfig.getConfig()
     const intervalHours = config.zecatSyncIntervalHours ?? 1
 
-    if (this.lastFastRunAt) {
-      const elapsedHours = (Date.now() - this.lastFastRunAt.getTime()) / (1000 * 60 * 60)
+    if (config.zecatLastFastSyncAt) {
+      const elapsedHours = (Date.now() - config.zecatLastFastSyncAt.getTime()) / (1000 * 60 * 60)
       if (elapsedHours < intervalHours) {
         this.logger.debug(
           `[fastSync] Skipped — ${elapsedHours.toFixed(2)}h elapsed, interval is ${intervalHours}h`,
@@ -31,7 +29,7 @@ export class ZecatCronService {
     }
 
     this.logger.log(`[fastSync] Iniciando (intervalo: ${intervalHours}h)`)
-    this.lastFastRunAt = new Date()
+    await this.pricingConfig.updateSyncTimestamp('fast')
 
     try {
       await this.zecatSync.syncCategoriesAndProductsFast()
@@ -51,9 +49,7 @@ export class ZecatCronService {
     const now = new Date()
     const currentHour = now.getHours()
 
-    // Ventana: desde startHour hasta las 6 hs (inclusive)
-    const inWindow =
-      currentHour >= startHour || currentHour < 6
+    const inWindow = currentHour >= startHour || currentHour < 6
 
     if (!inWindow) {
       this.logger.debug(
@@ -63,8 +59,8 @@ export class ZecatCronService {
     }
 
     // Evitar que corra más de una vez en la misma ventana nocturna
-    if (this.lastDetailRunAt) {
-      const elapsedHours = (Date.now() - this.lastDetailRunAt.getTime()) / (1000 * 60 * 60)
+    if (config.zecatLastDetailSyncAt) {
+      const elapsedHours = (Date.now() - config.zecatLastDetailSyncAt.getTime()) / (1000 * 60 * 60)
       if (elapsedHours < 20) {
         this.logger.debug(
           `[detailSync] Skipped — ya corrió hace ${elapsedHours.toFixed(2)}h`,
@@ -74,7 +70,7 @@ export class ZecatCronService {
     }
 
     this.logger.log(`[detailSync] Iniciando sync completo (hora: ${currentHour}h)`)
-    this.lastDetailRunAt = new Date()
+    await this.pricingConfig.updateSyncTimestamp('detail')
 
     try {
       await this.zecatSync.fullSync()

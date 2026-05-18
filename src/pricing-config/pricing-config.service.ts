@@ -108,6 +108,15 @@ export class PricingConfigService {
     return markupFactor.mul(ivaFactor)
   }
 
+  async updateSyncTimestamp(type: 'fast' | 'detail') {
+    const field = type === 'fast' ? 'zecatLastFastSyncAt' : 'zecatLastDetailSyncAt'
+    await this.prisma.pricingConfig.upsert({
+      where: { id: 1 },
+      create: { id: 1, providerMarkupPercent: new Prisma.Decimal(0), [field]: new Date() },
+      update: { [field]: new Date() },
+    })
+  }
+
   async getHomeData() {
     const config = await this.getConfig()
     const categoryIds: number[] = Array.isArray(config.featuredCategoryIds) ? config.featuredCategoryIds as number[] : []

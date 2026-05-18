@@ -286,12 +286,12 @@ export class ZecatSyncService {
       source: Source.ZECAT,
     }
 
+    // En update NO sobreescribimos isActive: el admin puede haberlo desactivado manualmente.
     const updateData: Prisma.ProductUpdateInput = {
       name: norm.name,
       description: norm.description,
       price: finalPrice,
       stock: norm.stock,
-      isActive: norm.isActive,
       sku: norm.sku,
       source: Source.ZECAT,
       updatedAt: new Date(),

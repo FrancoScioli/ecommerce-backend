@@ -16,4 +16,9 @@ export class UpdateProductDto extends PartialType(CreateProductDto) {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  coverImageId?: number
 }

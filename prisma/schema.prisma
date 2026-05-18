@@ -38,13 +38,14 @@ model Product {
   saleProducts SaleProduct[]
   printingTypes PrintingType[]
 
-  externalId String?  @unique // id de Zecat
-  source     Source   @default(INTERNAL)
-  sku        String? // referencia proveedor
-  stock      Int? // stock total si no hay variantes
-  isActive   Boolean  @default(true) // para ocultar manualmente
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  externalId   String?  @unique
+  source       Source   @default(INTERNAL)
+  sku          String?
+  stock        Int?
+  isActive     Boolean  @default(true)
+  coverImageId Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model PrintingType {
@@ -162,12 +163,14 @@ model SaleProduct {
 }
 
 model PricingConfig {
-  id                       Int      @id @default(1)
-  providerMarkupPercent    Decimal  @db.Decimal(5, 2)
-  zecatSyncIntervalHours   Int      @default(1)
-  zecatDetailSyncHour      Int      @default(23)
-  salesEmail               String   @default("")
-  featuredCategoryIds      Json     @default("[]")
-  featuredProductIds       Json     @default("[]")
-  updatedAt                DateTime @updatedAt
+  id                       Int       @id @default(1)
+  providerMarkupPercent    Decimal   @db.Decimal(5, 2)
+  zecatSyncIntervalHours   Int       @default(1)
+  zecatDetailSyncHour      Int       @default(23)
+  zecatLastFastSyncAt      DateTime?
+  zecatLastDetailSyncAt    DateTime?
+  salesEmail               String    @default("")
+  featuredCategoryIds      Json      @default("[]")
+  featuredProductIds       Json      @default("[]")
+  updatedAt                DateTime  @updatedAt
 }
