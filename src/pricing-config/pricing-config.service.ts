@@ -136,7 +136,8 @@ export class PricingConfigService {
               id: true,
               name: true,
               price: true,
-              images: { select: { url: true }, take: 1 },
+              coverImageId: true,
+              images: { select: { id: true, url: true } },
             },
           })
         : [],
@@ -149,6 +150,14 @@ export class PricingConfigService {
     const orderedProducts = productIds
       .map((id) => (products as any[]).find((p) => p.id === id))
       .filter(Boolean)
+      .map((p: any) => {
+        if (p.coverImageId && Array.isArray(p.images)) {
+          p.images = [...p.images].sort((a: any, b: any) =>
+            a.id === p.coverImageId ? -1 : b.id === p.coverImageId ? 1 : 0
+          )
+        }
+        return p
+      })
 
     return { categories: orderedCategories, products: orderedProducts }
   }

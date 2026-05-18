@@ -198,8 +198,8 @@ export class ProductService {
         const variant = await this.prisma.variant.create({
           data: { productId: id, name: v.name },
         })
-        const values = (v.options ?? [])
-          .map((o) => String(o).trim())
+        const values = ((v.options ?? []) as unknown[])
+          .map((o) => typeof o === 'string' ? o.trim() : String((o as { value?: string }).value ?? '').trim())
           .filter(Boolean)
 
         if (values.length) {
