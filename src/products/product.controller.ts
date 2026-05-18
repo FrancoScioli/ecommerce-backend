@@ -4,14 +4,14 @@ import {
   Query,
   Put,
   ParseIntPipe,
-  UsePipes,
-  ValidationPipe,
+  Req,
 } from '@nestjs/common';
 import { FileFieldsInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ProductService } from './product.service';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { Request } from 'express';
 
 @Controller('product')
 export class ProductController {
@@ -90,33 +90,28 @@ export class ProductController {
   }
 
   @Put(':id')
-  @UsePipes(new ValidationPipe({ transform: true, skipMissingProperties: true, whitelist: true }))
   @UseInterceptors(FilesInterceptor('images', 5))
   update(
     @Param('id', ParseIntPipe) id: number,
-    @Body('name') name: string,
-    @Body('description') description: string,
-    @Body('price') priceStr: string,
-    @Body('categoryId') catStr: string,
-    @Body('isActive') isActiveStr: string,
-    @Body('coverImageId') coverImageIdStr: string,
-    @Body('variants') variantsRaw: string,
+    @Req() req: Request,
     @UploadedFiles() images: Express.Multer.File[] = [],
   ) {
+    // Leemos directamente del body parseado por multer (FormData) sin pasar por ValidationPipe
+    const b = req.body as Record<string, string>
     const dto: UpdateProductDto = new UpdateProductDto()
-    if (name !== undefined) dto.name = name
-    if (description !== undefined) dto.description = description
-    if (priceStr !== undefined) { const p = parseFloat(priceStr); if (!isNaN(p)) dto.price = p }
-    if (catStr !== undefined) { const c = parseInt(catStr, 10); if (!isNaN(c)) dto.categoryId = c }
-    if (isActiveStr !== undefined) dto.isActive = isActiveStr === 'true'
-    if (coverImageIdStr !== undefined) { const cid = parseInt(coverImageIdStr, 10); if (!isNaN(cid)) dto.coverImageId = cid }
-    if (variantsRaw) {
+    if (b.name !== undefined) dto.name = b.name
+    if (b.description !== undefined) dto.description = b.description
+    if (b.price !== undefined) { const p = parseFloat(b.price); if (!isNaN(p)) dto.price = p }
+    if (b.categoryId !== undefined) { const c = parseInt(b.categoryId, 10); if (!isNaN(c)) dto.categoryId = c }
+    if (b.isActive !== undefined) dto.isActive = b.isActive === 'true'
+    if (b.coverImageId !== undefined) { const cid = parseInt(b.coverImageId, 10); if (!isNaN(cid)) dto.coverImageId = cid }
+    if (b.variants) {
       try {
-        const parsed = JSON.parse(variantsRaw)
+        const parsed = JSON.parse(b.variants)
         dto.variants = (Array.isArray(parsed) ? parsed : [])
           .map((v: { name?: string; options?: string[] }) => ({
             name: v.name?.trim() ?? '',
-            options: (Array.isArray(v.options) ? v.options : []).map((o: string) => o?.trim()).filter(Boolean),
+            options: (Array.isArray(v.options) ? v.options : []).map((o: string) => String(o).trim()).filter(Boolean),
           }))
           .filter((v: { name: string; options: string[] }) => v.name && v.options.length > 0)
       } catch { /* ignorar variantes inválidas */ }
