@@ -19,6 +19,7 @@ import { ZecatModule } from './zecat/zecat.module';
 import { SearchModule } from './search/search.module';
 import { PricingConfigModule } from './pricing-config/pricing-config.module';
 import { ImportModule } from './import/import.module';
+import { ImpromModule } from './improm/improm.module';
 
 
 @Module({
@@ -43,6 +44,7 @@ import { ImportModule } from './import/import.module';
     SalesModule,
     ShippingModule,
     ZecatModule,
+    ImpromModule,
     SearchModule,
     PricingConfigModule,
     ImportModule,

@@ -24,7 +24,7 @@ export class SearchService {
                 isActive: true,
                 name: { contains: q, mode: 'insensitive' },
             },
-            select: { id: true, name: true, price: true, categoryId: true },
+            select: { id: true, name: true, price: true, categoryId: true, source: true },
             take: take * 10,
         })
 
@@ -62,6 +62,7 @@ export class SearchService {
             id: p.id,
             name: p.name,
             price: p.price,
+            source: p.source,
             imageUrl: firstImageByProduct.get(p.id) ?? null,
             categoryId: p.categoryId ?? null,
             categoryName: p.categoryId ? categoryMap.get(p.categoryId) ?? null : null,

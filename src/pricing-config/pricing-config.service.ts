@@ -61,6 +61,22 @@ export class PricingConfigService {
       updateData.featuredProductIds = dto.featuredProductIds
       createData.featuredProductIds = dto.featuredProductIds
     }
+    if (dto.impromMarkupPercent !== undefined) {
+      updateData.impromMarkupPercent = new Prisma.Decimal(dto.impromMarkupPercent)
+      createData.impromMarkupPercent = new Prisma.Decimal(dto.impromMarkupPercent)
+    }
+    if (dto.impromSyncIntervalHours !== undefined) {
+      updateData.impromSyncIntervalHours = dto.impromSyncIntervalHours
+      createData.impromSyncIntervalHours = dto.impromSyncIntervalHours
+    }
+    if (dto.legendUsdPrice !== undefined) {
+      updateData.legendUsdPrice = dto.legendUsdPrice
+      createData.legendUsdPrice = dto.legendUsdPrice
+    }
+    if (dto.legendImpromPersonal !== undefined) {
+      updateData.legendImpromPersonal = dto.legendImpromPersonal
+      createData.legendImpromPersonal = dto.legendImpromPersonal
+    }
 
     const config = await this.prisma.pricingConfig.upsert({
       where: { id: 1 },
@@ -108,8 +124,11 @@ export class PricingConfigService {
     return markupFactor.mul(ivaFactor)
   }
 
-  async updateSyncTimestamp(type: 'fast' | 'detail') {
-    const field = type === 'fast' ? 'zecatLastFastSyncAt' : 'zecatLastDetailSyncAt'
+  async updateSyncTimestamp(type: 'fast' | 'detail' | 'improm') {
+    const field =
+      type === 'fast' ? 'zecatLastFastSyncAt' :
+      type === 'detail' ? 'zecatLastDetailSyncAt' :
+      'impromLastSyncAt'
     await this.prisma.pricingConfig.upsert({
       where: { id: 1 },
       create: { id: 1, providerMarkupPercent: new Prisma.Decimal(0), [field]: new Date() },

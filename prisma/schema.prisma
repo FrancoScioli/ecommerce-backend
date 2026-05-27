@@ -10,6 +10,7 @@ datasource db {
 enum Source {
   INTERNAL
   ZECAT
+  IMPROM
 }
 
 model Category {
@@ -169,6 +170,11 @@ model PricingConfig {
   zecatDetailSyncHour      Int       @default(23)
   zecatLastFastSyncAt      DateTime?
   zecatLastDetailSyncAt    DateTime?
+  impromMarkupPercent      Decimal   @default(0) @db.Decimal(5, 2)
+  impromSyncIntervalHours  Int       @default(24)
+  impromLastSyncAt         DateTime?
+  legendUsdPrice           String    @default("")
+  legendImpromPersonal     String    @default("")
   salesEmail               String    @default("")
   featuredCategoryIds      Json      @default("[]")
   featuredProductIds       Json      @default("[]")
