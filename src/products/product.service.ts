@@ -213,23 +213,11 @@ export class ProductService {
 
     // Imágenes nuevas (opcionales en update)
     if (images?.length) {
-      // Aquí subís/guardás los archivos y obtenés URLs finales
-      // Suponiendo que guardás el buffer y retornás una URL por imagen:
-      const uploads = [] as { url: string }[]
-      for (const file of images) {
-        // TODO: subir a tu storage y obtener `url`
-        // const url = await this.uploader.upload(file) ...
-        // Por ahora, placeholder:
-        const url = `uploads/${Date.now()}_${file.originalname}`
-        uploads.push({ url })
-      }
-
-      if (uploads.length) {
-        await this.prisma.productImage.createMany({
-          data: uploads.map((u) => ({ productId: id, url: u.url })),
-          skipDuplicates: true,
-        })
-      }
+      const urls = await Promise.all(images.map((f) => this.s3Service.uploadFile(f, 'products')))
+      await this.prisma.productImage.createMany({
+        data: urls.map((url) => ({ productId: id, url })),
+        skipDuplicates: true,
+      })
     }
 
     // Devolver con relaciones frescas

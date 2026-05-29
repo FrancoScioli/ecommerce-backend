@@ -90,7 +90,16 @@ export class ProductController {
   }
 
   @Put(':id')
-  @UseInterceptors(FilesInterceptor('images', 5))
+  @UseInterceptors(FilesInterceptor('images', 5, {
+    storage: memoryStorage(),
+    fileFilter: (_req, file, cb) => {
+      if (!file.mimetype.match(/\/(jpg|jpeg|png|webp)$/)) {
+        return cb(new BadRequestException('Sólo JPG/PNG/WebP'), false);
+      }
+      cb(null, true);
+    },
+    limits: { fileSize: 5 * 1024 * 1024 },
+  }))
   update(
     @Param('id', ParseIntPipe) id: number,
     @Req() req: Request,
