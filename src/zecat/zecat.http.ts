@@ -29,7 +29,7 @@ export class ZecatHttp {
 
     this.client = axios.create({
       baseURL: this.baseURL,
-      timeout: 20000,
+      timeout: 30000,
       headers: {
         Authorization: `Bearer ${this.token}`,
         'Content-Type': 'application/json',
