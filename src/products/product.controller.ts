@@ -37,7 +37,7 @@ export class ProductController {
   @UseGuards(JwtAuthGuard)
   @Post()
   @UseInterceptors(FileFieldsInterceptor(
-    [{ name: 'images', maxCount: 5 }],
+    [{ name: 'images', maxCount: 10 }],
     {
       storage: memoryStorage(),
       fileFilter: (_req, file, cb) => {
@@ -90,7 +90,7 @@ export class ProductController {
   }
 
   @Put(':id')
-  @UseInterceptors(FilesInterceptor('images', 5, {
+  @UseInterceptors(FilesInterceptor('images', 10, {
     storage: memoryStorage(),
     fileFilter: (_req, file, cb) => {
       if (!file.mimetype.match(/\/(jpg|jpeg|png|webp)$/)) {
